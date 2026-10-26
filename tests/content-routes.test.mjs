@@ -140,12 +140,9 @@ test("primary navigation is simplified to five clear groups", async () => {
   const html = await render(worker, "/en");
   const navButtons = html.match(/<button[^>]*class="nav-button[^"]*"[^>]*>/g) ?? [];
   assert.equal(navButtons.length, 5);
-  for (const label of ["Events &amp; Activities", "Members &amp; Solutions", "AI+ Industries", "Programmes &amp; GBA", "Insights &amp; About"]) {
-    assert.ok(html.includes(label), `Missing simplified navigation label: ${label}`);
-  }
-  for (const oldLabel of ["Join &amp; Network", "About &amp; Insights"]) {
-    assert.ok(!html.includes(oldLabel), `Old navigation label remains: ${oldLabel}`);
-  }
+  const labels = [...html.matchAll(/<button[^>]*class="nav-button[^"]*"[^>]*>([\s\S]*?)<\/button>/g)]
+    .map((match) => match[1].replace(/<span[\s\S]*?<\/span>/g, "").replace(/<!--[\s\S]*?-->/g, "").trim());
+  assert.deepEqual(labels, ["Events", "Members", "AI+ Industries", "Programmes", "Insights"]);
 });
 
 test("public brand and legal organisation remain distinct", async () => {

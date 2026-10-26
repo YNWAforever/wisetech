@@ -1,107 +1,73 @@
-# vinext-starter
+# WiseTech Hong Kong
 
-A clean full-stack starter running on
-[vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
-Drizzle support.
+English and Traditional Chinese public site for the evolving AI+ platform of
+Hong Kong Wireless Technology Industry Association (WTIA). Built with React 19,
+Next.js App Router conventions and Vinext/Vite; deployed as a Cloudflare Worker
+through Sites. This is a content and enquiry prototype: no live member database,
+payments, registration, subscription service or model API is connected.
 
-## Prerequisites
+## Run locally
 
-- Node.js `>=22.13.0`
-- Linux with `flock`, `curl`, and GNU `timeout`
+Use Node.js **>=22.13.0**, npm, and Linux with `bash`, `flock`, `curl` and GNU
+`timeout`. The helper scripts are not native macOS/Windows scripts; use Linux or
+WSL. Versions are locked in `package-lock.json`.
 
-## Sites Lifecycle
-
-The Sites lifecycle CLI runs the locked dependency install before returning this checkout. Edit the source under `app/`, then checkpoint when a coherent milestone is ready to inspect or share. The remote Sites builder runs `npm run build` against the pushed commit. Do not repeat install or build as a normal pre-checkpoint step.
-
-This starter does not use `wrangler.jsonc`.
-
-`install:ci` is intentionally a single, non-retrying `npm ci`. It refuses a concurrent install for the same project, consumes a matching image-seeded npm cache with `--prefer-offline` while retaining registry fallback for a missing cache object, otherwise downloads and verifies the complete vinext tarball recorded in `package-lock.json`, limits npm to one socket, and terminates a stalled install. `build` applies a short timeout. These helpers target Linux and use GNU `timeout`; they are not native macOS scripts.
-
-Scripts that need writable project-scoped home, npm, XDG, and temporary paths use `scripts/sites-env.sh`. The `dev` and `start` scripts honor the caller's runtime environment and keep Wrangler logs inside the checkout. The generated `.sites-runtime/` directory is disposable and ignored by Git.
-
-## Included Shape
-
-- edit site code under `app/`
-- `app/chatgpt-auth.ts` provides optional dispatch-owned ChatGPT sign-in helpers
-- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
-- `vite.config.ts` simulates declared bindings for local development
-- `db/index.ts` reads the D1 binding from the Cloudflare Worker environment
-- `db/schema.ts` starts intentionally empty
-- `examples/d1/` contains an optional D1 example surface
-- `drizzle.config.ts` supports local migration generation when needed
-
-## Workspace Auth Headers
-
-OpenAI workspace sites can read the current user's email from
-`oai-authenticated-user-email`.
-
-SIWC-authenticated workspace sites may also receive
-`oai-authenticated-user-full-name` when the user's SIWC profile has a non-empty
-`name` claim. The full-name value is percent-encoded UTF-8 and is accompanied by
-`oai-authenticated-user-full-name-encoding: percent-encoded-utf-8`.
-
-Treat the full name as optional and fall back to email when it is absent:
-
-```tsx
-import { headers } from "next/headers";
-
-export default async function Home() {
-  const requestHeaders = await headers();
-  const email = requestHeaders.get("oai-authenticated-user-email");
-  const encodedFullName = requestHeaders.get("oai-authenticated-user-full-name");
-  const fullName =
-    encodedFullName &&
-    requestHeaders.get("oai-authenticated-user-full-name-encoding") ===
-      "percent-encoded-utf-8"
-      ? decodeURIComponent(encodedFullName)
-      : null;
-
-  const displayName = fullName ?? email;
-  // ...
-}
+```bash
+npm run install:ci
+npm run dev -- --port 5173 --strictPort
 ```
 
-## Optional Dispatch-Owned ChatGPT Sign-In
+Open `http://localhost:5173/en` and `/zh`. On a network-restricted development
+machine, optional Cloudflare metadata/metrics calls can be disabled for this
+process:
 
-Import the ready-to-use helpers from `app/chatgpt-auth.ts` when the site needs
-optional or required ChatGPT sign-in:
+```bash
+CLOUDFLARE_CF_FETCH_ENABLED=false WRANGLER_SEND_METRICS=false npm run dev -- --port 5173 --strictPort
+```
 
-- Use `getChatGPTUser()` for optional signed-in UI.
-- Use `requireChatGPTUser(returnTo)` for server-rendered pages that should send
-  anonymous visitors through Sign in with ChatGPT.
-- Use `chatGPTSignInPath(returnTo)` and `chatGPTSignOutPath(returnTo)` for
-  browser links or actions.
-- Pass a same-origin relative `returnTo` path for the destination after sign-in
-  or sign-out. The helper validates and safely encodes it.
-- Mark protected pages with `export const dynamic = "force-dynamic"` because
-  they depend on per-request identity headers.
+If a Sites lifecycle has already installed dependencies, reuse them. The install
+helper performs one bounded, locked `npm ci`; don't run concurrent installs.
+No `.env` file or application secrets are required for the current public site.
 
-Dispatch owns `/signin-with-chatgpt`, `/signout-with-chatgpt`, `/callback`, the
-OAuth cookies, and identity header injection. Do not implement app routes for
-those reserved paths. Routes that do not import and call the helper remain
-anonymous-compatible.
+## Verify
 
-SIWC establishes identity only; it does not prove workspace membership. Use the
-Sites hosting platform's access policy controls for workspace-wide restrictions,
-or enforce explicit server-side membership or allowlist checks.
+```bash
+npm test         # build fresh dist, then run all Node tests
+npm run lint     # ESLint; currently reports existing image-element warnings
+```
 
-Use SIWC for account pages, user-specific dashboards, saved records, and write
-actions tied to the current ChatGPT user. Leave public content anonymous.
+For a focused edit after a successful build:
 
-## Diagnostic Commands
+```bash
+node --test tests/auth-return-paths.test.mjs
+node --test tests/core-routes.test.mjs
+```
 
-- `npm run install:ci`: perform the one bounded lockfile install
-- `npm run dev`: start the Vite/Vinext development server
-- `npm run build`: build the deployable Sites artifact
-- `npm run start`: start the built Vinext application
-- `npm test`: build and verify the rendered development-preview metadata
-- `npm run db:generate`: generate Drizzle migrations after schema changes
+Worker tests import `dist/server/index.js`; rerun `npm run build` after changing
+application code. A test run against old `dist` does not verify source changes.
+See [test coverage and limitations](docs/operations.md#test-contract).
 
-Use build commands for targeted diagnosis after a remote failure, not as part of the normal checkpoint path.
+## Build and deploy
 
-The timeout defaults can be overridden for a controlled canary with `SITES_INSTALL_TIMEOUT`, `SITES_INSTALL_KILL_AFTER`, `SITES_BUILD_TIMEOUT`, and `SITES_BUILD_KILL_AFTER`. A timeout fails the command; the helpers never retry an unchanged install or build.
+```bash
+npm run build
+npm run start -- --port 5173
+curl --fail --silent http://localhost:5173/en > /dev/null
+curl --fail --silent http://localhost:5173/zh > /dev/null
+```
 
-## Learn More
+`dist/` is a Worker artifact, not a static export. Sites builds the saved site
+version using `npm run build`; deployment is a separate platform action. Pushing
+a GitHub PR alone does not prove a Sites version was saved or deployed. Follow
+[the release and rollback runbook](docs/operations.md#release-through-sites).
 
-- [vinext Documentation](https://github.com/cloudflare/vinext)
-- [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+## Where to change things
+
+- [Architecture and flow boundaries](ARCHITECTURE.md)
+- [Operations, test contract and release checks](docs/operations.md)
+- [Risk map and next three engineering investments](docs/engineering.md)
+
+Edit pages and bilingual content under `app/`, assets under `public/`, and
+navigation groups in `app/megaNav.ts`. Keep English and Traditional Chinese
+routes and current-versus-historical status consistent. The present public
+identity uses WiseTech Hong Kong; the legal organisation remains WTIA.
