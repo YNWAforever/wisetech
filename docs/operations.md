@@ -14,7 +14,7 @@ on pull requests and pushes to `main` using Node 24 on Ubuntu.
 | `full-inner-pages` | Expanded routes, enquiry entry points, preview and fallback text |
 | `rendered-html` | Development-preview metadata on the root response |
 | `partner-assets` | All 79 source PNG dimensions and RGBA format |
-| `core-routes` | Localized navigation, enquiry field/consent structure, preview robots metadata, industry canonical aliases, every sitemap destination and paired translation, packaged hosting metadata/migration journal |
+| `core-routes` | Root canonical, localized language-switch links, labelled enquiry controls and unchecked initial consent, all portal modules plus missing-subpage/activation/explicit-404 indexing, all six industry aliases, both fallback renderers' localized recovery links, reciprocal sitemap pairs and rendered canonical/alternate metadata, packaged hosting metadata/migration journal |
 | `auth-return-paths` | Local query/fragment preservation; rejection of external URLs and reserved auth destinations, including traversal |
 
 The auth tests load the real standalone TypeScript helper via the declared
@@ -26,6 +26,13 @@ keyboard interaction, wizard validation, email-client delivery, real asset
 serving, image transformation bindings, platform header injection, or persistence.
 The ASSETS stub deliberately does not emulate those services. New browser tests
 should intercept external handoffs and never send email.
+
+The route assertions inspect canonical/alternate links in the document head,
+not copies in the serialized RSC payload. Alias requests include query strings
+to check that metadata remains canonical, while the SSR language switch retains
+the requested alias. Query/fragment preservation on clicking that switch still
+requires a browser test. Fallback tests pin today's HTTP 200 content responses;
+they do not establish correct HTTP 404 handling or indexing for every missing URL.
 
 For diagnosis without rebuilding unchanged code:
 
